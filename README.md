@@ -4,6 +4,8 @@ Community-powered interview experience sharing with company pages, question clus
 
 This folder is self-contained and can be used as its own Git repo root.
 
+Architecture walkthrough: [ARCHITECTURE.md](/home/chinu/interview-bank/ARCHITECTURE.md)
+
 ## Structure
 
 ```text
