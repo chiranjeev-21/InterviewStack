@@ -171,6 +171,76 @@ VITE_TOKEN_GENERATOR_UI_URL=http://localhost:5174
 
 In local `dev` mode the service uses H2 automatically. Database variables are mainly for Docker or the `prod` profile.
 
+## Deploy On Vercel + Railway
+
+Production setup for this repo is:
+
+- `ui/` on Vercel
+- `service/` on Railway
+- Vercel rewrites `/api/v1/*` to the Railway service
+
+### Railway Service
+
+In Railway, create a service from this repo and set:
+
+- Root Directory: `service`
+- Public domain target port: `8080`
+
+Recommended Railway variables on the `interview-bank` service:
+
+```bash
+SPRING_PROFILES_ACTIVE=prod
+PORT=8080
+JWT_SECRET=your-shared-jwt-secret
+APP_CORS_ALLOWED_ORIGINS=https://your-interview-bank.vercel.app
+DATABASE_URL=jdbc:postgresql://${{Postgres.PGHOST}}:${{Postgres.PGPORT}}/${{Postgres.PGDATABASE}}
+DATABASE_USERNAME=${{Postgres.PGUSER}}
+DATABASE_PASSWORD=${{Postgres.PGPASSWORD}}
+```
+
+Notes:
+
+- Replace `Postgres` with your actual Railway Postgres service name if it is different.
+- `DATABASE_URL` must use the `jdbc:postgresql://...` format for Spring Boot.
+- The service reads `PORT`, so it can run correctly on Railway.
+
+### Vercel UI
+
+In Vercel, import this repo and set:
+
+- Root Directory: `ui`
+- Framework Preset: `Vite`
+- Build Command: `npm run build`
+- Output Directory: `dist`
+
+Set Vercel environment variables:
+
+```bash
+VITE_API_BASE_URL=/api/v1
+VITE_TOKEN_GENERATOR_UI_URL=https://your-token-generator.vercel.app
+```
+
+This repo's [vercel.json](/home/chinu/interview-bank/ui/vercel.json) proxies `/api/v1/:path*` to the Railway backend. If you deploy to a different Railway domain, update that file.
+
+### Post-Deploy Checks
+
+Test in this order:
+
+1. Railway health:
+   `https://YOUR-INTERVIEW-BANK.up.railway.app/actuator/health`
+2. Railway API:
+   `https://YOUR-INTERVIEW-BANK.up.railway.app/api/v1/companies`
+3. Vercel proxied API:
+   `https://YOUR-INTERVIEW-BANK.vercel.app/api/v1/companies`
+4. Vercel UI:
+   `https://YOUR-INTERVIEW-BANK.vercel.app`
+
+Expected health response:
+
+```json
+{"status":"UP"}
+```
+
 ## API Summary
 
 - `GET /api/v1/companies`
