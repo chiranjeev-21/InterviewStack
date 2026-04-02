@@ -2,9 +2,63 @@
 
 Community-powered interview experience sharing with company pages, question clustering, and prediction hints.
 
+![Java](https://img.shields.io/badge/Java-17-437291?style=flat-square)
+![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.2-6DB33F?style=flat-square)
+![React](https://img.shields.io/badge/React-18-61DAFB?style=flat-square)
+![Vite](https://img.shields.io/badge/Vite-5-646CFF?style=flat-square)
+![Deploy](https://img.shields.io/badge/Deploy-Vercel%20%2B%20Render-black?style=flat-square)
+![Database](https://img.shields.io/badge/Database-Supabase-3ECF8E?style=flat-square)
+
 This folder is self-contained and can be used as its own Git repo root.
 
 Architecture walkthrough: [ARCHITECTURE.md](/home/chinu/interview-bank/ARCHITECTURE.md)
+
+## At A Glance
+
+```mermaid
+flowchart LR
+    U[User]
+
+    subgraph Vercel
+        UI[Interview Bank UI]
+    end
+
+    subgraph Render
+        API[Interview Bank Service]
+    end
+
+    subgraph Supabase
+        DB[(Postgres)]
+    end
+
+    TG[Token Generator]
+
+    U --> UI
+    UI -->|/api/v1/*| API
+    API --> DB
+    UI -. verified contributor token .-> TG
+```
+
+## Main Submission Flow
+
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant UI as Submit Page
+    participant API as Interview Bank Service
+    participant JWT as ContributorTokenValidator
+    participant DB as Postgres
+
+    U->>UI: Paste token and submit experience
+    UI->>API: POST /api/v1/experiences
+    API->>JWT: validateAndExtract(token)
+    JWT-->>API: claims
+    API->>DB: check jti not used
+    API->>DB: save experience + questions
+    DB-->>API: saved entity
+    API-->>UI: 201 Created
+    UI-->>U: Show submitted experience
+```
 
 ## Structure
 
