@@ -239,7 +239,7 @@ VITE_API_BASE_URL=/api/v1
 VITE_TOKEN_GENERATOR_UI_URL=https://your-token-generator.vercel.app
 ```
 
-This repo's [vercel.json](/home/chinu/interview-bank/ui/vercel.json) currently proxies `/api/v1/:path*` to the old Railway backend. When you cut over to Render, update only that destination URL. The UI code itself does not need to change.
+This repo's [vercel.json](/home/chinu/interview-bank/ui/vercel.json) proxies `/api/v1/:path*` to the deployed backend service. If the Render URL changes later, update only that destination URL. The UI code itself does not need to change.
 
 ### Post-Deploy Checks
 
