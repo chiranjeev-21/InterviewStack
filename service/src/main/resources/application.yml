@@ -60,6 +60,12 @@ spring:
     activate:
       on-profile: prod
 
+  flyway:
+    # Supabase's public schema contains preexisting objects, so Flyway treats it as
+    # non-empty. Baseline at version 0 so our first migration (V1__initial_schema.sql)
+    # still executes on a fresh hosted database.
+    baseline-version: 0
+
   datasource:
     url: ${DATABASE_URL}
     username: ${DATABASE_USERNAME}
