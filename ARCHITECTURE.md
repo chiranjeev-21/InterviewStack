@@ -7,7 +7,7 @@ This document explains how the full platform works in production and how the mai
 `interview-bank` is the main product users browse and submit to.
 
 - The `ui/` folder is a Vite React app deployed to Vercel.
-- The `service/` folder is a Spring Boot API deployed to Railway.
+- The `service/` folder is a Spring Boot API that can be deployed to Render.
 - The API stores company and interview data in Postgres.
 - Submission uses a contributor token issued by the separate `token-generator` repo.
 
@@ -26,14 +26,14 @@ flowchart LR
         TUI[Token Generator UI]
     end
 
-    subgraph Railway
+    subgraph Render
         IAPI[Interview Bank Service]
         TAPI[Token Generator Service]
         PG[(Postgres)]
         RD[(Redis)]
     end
 
-    SMTP[SMTP Provider]
+    RESEND[Resend API]
 
     U --> IUI
     U --> TUI
@@ -43,7 +43,7 @@ flowchart LR
 
     IAPI --> PG
     TAPI --> RD
-    TAPI --> SMTP
+    TAPI --> RESEND
 ```
 
 ## Repo Responsibilities
@@ -62,7 +62,7 @@ flowchart LR
 - `ui/src/pages/CompanyPage.tsx`: company details, experiences, prediction panel
 - `ui/src/pages/SubmitPage.tsx`: token paste + submission wizard
 - `ui/src/services/api.ts`: Axios client and UI-to-API calls
-- `ui/vercel.json`: Vercel rewrite to Railway API
+- `ui/vercel.json`: Vercel rewrite to the deployed API
 
 ### Service
 
@@ -81,7 +81,7 @@ When a user opens the homepage:
 1. The browser loads the Vercel-hosted React app.
 2. `ui/src/pages/HomePage.tsx` uses React Query to call `getTrendingCompanies()` or `getCompanies()`.
 3. `ui/src/services/api.ts` sends the request to `/api/v1/...`.
-4. Vercel rewrites `/api/v1/*` to the Railway `interview-bank` service.
+4. Vercel rewrites `/api/v1/*` to the deployed `interview-bank` service.
 5. `ApiController` receives the request.
 6. `CompanyService` reads from `CompanyRepository` and `ExperienceRepository`.
 7. Postgres returns the data.
@@ -101,7 +101,7 @@ sequenceDiagram
 
     B->>UI: Open /
     UI->>V: GET /api/v1/companies/trending
-    V->>API: Forward to Railway service
+    V->>API: Forward to backend service
     API->>CS: getTrending()
     CS->>DB: Query top companies
     DB-->>CS: Rows
@@ -139,7 +139,7 @@ This starts in the other repo, but it matters because `interview-bank` depends o
    - disposable provider block
    - MX lookup
 8. When the user requests an OTP, `OtpService` stores the OTP and attempt counter in Redis.
-9. `EmailService` sends the OTP email via SMTP.
+9. `EmailService` sends the OTP email via Resend.
 10. When the user verifies the OTP, `TokenIssuerService` creates a signed JWT with:
    - `sub = email`
    - `iss = interview-bank-token-generator`
@@ -165,7 +165,7 @@ sequenceDiagram
 
     B->>UI: Submit form with X-Contributor-Token
     UI->>V: POST /api/v1/experiences
-    V->>API: Forward to Railway service
+    V->>API: Forward to backend service
     API->>ES: submitExperience(request, token)
     ES->>TV: validateAndExtract(token)
     TV-->>ES: claims(sub, aud, iss, jti, exp)
@@ -236,7 +236,7 @@ That is why `token-generator` can be thought of as an issuing service, while `in
 5. User enters a company email.
 6. Token-generator validates the domain.
 7. User requests OTP.
-8. Token-generator stores OTP in Redis and sends it through SMTP.
+8. Token-generator stores OTP in Redis and sends it through Resend.
 9. User enters the OTP.
 10. Token-generator verifies the OTP and returns a JWT.
 11. User pastes the JWT into Interview Bank.
@@ -252,6 +252,5 @@ That is why `token-generator` can be thought of as an issuing service, while `in
 - Trending companies and prediction responses are cached.
 - Production routing is:
   - Vercel for `ui/`
-  - Railway for `service/`
+  - Render for `service/`
   - Postgres for persistence
-

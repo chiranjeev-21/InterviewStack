@@ -173,38 +173,55 @@ VITE_TOKEN_GENERATOR_UI_URL=http://localhost:5174
 
 In local `dev` mode the service uses H2 automatically. Database variables are mainly for Docker or the `prod` profile.
 
-## Deploy On Vercel + Railway
+## Deploy On Vercel + Render + Supabase
 
 Production setup for this repo is:
 
 - `ui/` on Vercel
-- `service/` on Railway
-- Vercel rewrites `/api/v1/*` to the Railway service
+- `service/` on Render
+- Postgres on Supabase
+- Vercel rewrites `/api/v1/*` to the deployed backend service
 
-### Railway Service
+### Supabase Postgres
 
-In Railway, create a service from this repo and set:
+Create a Supabase project first, then open `Connect` in the Supabase dashboard and copy a Postgres connection string.
 
-- Root Directory: `service`
-- Public domain target port: `8080`
+For Spring Boot on a hosted platform, use a JDBC URL in this shape:
 
-Recommended Railway variables on the `interview-bank` service:
+```bash
+DATABASE_URL=jdbc:postgresql://HOST:PORT/postgres?sslmode=require
+DATABASE_USERNAME=YOUR_SUPABASE_DB_USER
+DATABASE_PASSWORD=YOUR_SUPABASE_DB_PASSWORD
+```
+
+If your host cannot use Supabase direct IPv6 connections, use Supavisor session mode from the same `Connect` screen and convert that URL to `jdbc:postgresql://...`.
+
+### Render Service
+
+In Render, create a Web Service from this repo and set:
+
+- Runtime: `Docker`
+- Dockerfile Path: `service/Dockerfile`
+- Health Check Path: `/actuator/health`
+
+Recommended Render variables on the `interview-bank` service:
 
 ```bash
 SPRING_PROFILES_ACTIVE=prod
 PORT=8080
 JWT_SECRET=your-shared-jwt-secret
 APP_CORS_ALLOWED_ORIGINS=https://your-interview-bank.vercel.app
-DATABASE_URL=jdbc:postgresql://${{Postgres.PGHOST}}:${{Postgres.PGPORT}}/${{Postgres.PGDATABASE}}
-DATABASE_USERNAME=${{Postgres.PGUSER}}
-DATABASE_PASSWORD=${{Postgres.PGPASSWORD}}
+DATABASE_URL=jdbc:postgresql://HOST:PORT/postgres?sslmode=require
+DATABASE_USERNAME=YOUR_SUPABASE_DB_USER
+DATABASE_PASSWORD=YOUR_SUPABASE_DB_PASSWORD
 ```
 
 Notes:
 
-- Replace `Postgres` with your actual Railway Postgres service name if it is different.
 - `DATABASE_URL` must use the `jdbc:postgresql://...` format for Spring Boot.
-- The service reads `PORT`, so it can run correctly on Railway.
+- `SPRING_PROFILES_ACTIVE=prod` is required for hosted Postgres.
+- The service reads `PORT`, so it can run correctly on Render.
+- Render free services can spin down after inactivity, so expect a cold start after idle time.
 
 ### Vercel UI
 
@@ -222,16 +239,16 @@ VITE_API_BASE_URL=/api/v1
 VITE_TOKEN_GENERATOR_UI_URL=https://your-token-generator.vercel.app
 ```
 
-This repo's [vercel.json](/home/chinu/interview-bank/ui/vercel.json) proxies `/api/v1/:path*` to the Railway backend. If you deploy to a different Railway domain, update that file.
+This repo's [vercel.json](/home/chinu/interview-bank/ui/vercel.json) currently proxies `/api/v1/:path*` to the old Railway backend. When you cut over to Render, update only that destination URL. The UI code itself does not need to change.
 
 ### Post-Deploy Checks
 
 Test in this order:
 
-1. Railway health:
-   `https://YOUR-INTERVIEW-BANK.up.railway.app/actuator/health`
-2. Railway API:
-   `https://YOUR-INTERVIEW-BANK.up.railway.app/api/v1/companies`
+1. Render health:
+   `https://YOUR-INTERVIEW-BANK.onrender.com/actuator/health`
+2. Render API:
+   `https://YOUR-INTERVIEW-BANK.onrender.com/api/v1/companies`
 3. Vercel proxied API:
    `https://YOUR-INTERVIEW-BANK.vercel.app/api/v1/companies`
 4. Vercel UI:
