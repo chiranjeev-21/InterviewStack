@@ -57,7 +57,13 @@ export default function SubmitPage() {
       navigate(`/experiences/${data.id}`);
     },
     onError: (err: any) => {
-      const msg = err?.response?.data?.detail ?? 'Submission failed. Please check your token and try again.';
+      const fieldErrors = err?.response?.data?.fieldErrors as Record<string, string> | undefined;
+      if (fieldErrors && Object.keys(fieldErrors).length > 0) {
+        const msg = Object.values(fieldErrors)[0];
+        toast.error(msg);
+        return;
+      }
+      const msg = err?.response?.data?.detail ?? 'Submission failed. Please check your input and try again.';
       toast.error(msg);
     },
   });
@@ -88,6 +94,18 @@ export default function SubmitPage() {
   // ── Submit ───────────────────────────────────────────────────────────────
 
   const handleSubmit = () => {
+    if (!companySlug) { toast.error('Please select a company from the suggestions'); return; }
+    if (role.trim().length < 2) { toast.error('Role must be at least 2 characters'); return; }
+
+    const validQuestions = questions.filter(q => q.text.trim());
+    if (validQuestions.length === 0) { toast.error('Add at least one question'); return; }
+
+    const tooShortQuestion = validQuestions.find(q => q.text.trim().length < 5);
+    if (tooShortQuestion) {
+      toast.error('Each question must be at least 5 characters long');
+      return;
+    }
+
     const payload: CreateExperiencePayload = {
       companySlug,
       role,
@@ -98,8 +116,7 @@ export default function SubmitPage() {
       outcome: outcome as Outcome || undefined,
       rounds: rounds ? parseInt(rounds) : undefined,
       description: description || undefined,
-      questions: questions
-        .filter(q => q.text.trim())
+      questions: validQuestions
         .map(q => ({
           text: q.text.trim(),
           category: q.category,
@@ -376,7 +393,7 @@ export default function SubmitPage() {
 
           <NavButtons onBack={goPrev} onNext={() => {
             if (!companySlug) { toast.error('Please select a company from the suggestions'); return; }
-            if (!role.trim()) { toast.error('Role is required'); return; }
+            if (role.trim().length < 2) { toast.error('Role must be at least 2 characters'); return; }
             if (!year) { toast.error('Year is required'); return; }
             goNext();
           }} />
@@ -458,7 +475,12 @@ export default function SubmitPage() {
           </button>
 
           <NavButtons onBack={goPrev} onNext={() => {
-            if (questions.filter(q => q.text.trim()).length === 0) { toast.error('Add at least one question'); return; }
+            const validQuestions = questions.filter(q => q.text.trim());
+            if (validQuestions.length === 0) { toast.error('Add at least one question'); return; }
+            if (validQuestions.some(q => q.text.trim().length < 5)) {
+              toast.error('Each question must be at least 5 characters long');
+              return;
+            }
             goNext();
           }} />
         </div>
